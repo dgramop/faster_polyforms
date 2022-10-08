@@ -398,8 +398,10 @@ impl Polyform {
     }
     
 
-    pub fn shuffle(&mut self, times: usize) {
+    pub fn shuffle(&mut self, times: usize) -> Option<((i32, i32, i32), (i32, i32, i32))> {
         let LEN: usize = self.complex.len();
+
+        let mut last_shuffled = None;
         for _ in 0..times {
             let removed = self.remove_random();
             //println!("removed {:?}", removed);
@@ -412,8 +414,12 @@ impl Polyform {
                 //println!("Reversing operation");
                 self.insert(removed);
                 self.remove(&inserted);
+            } else {
+                last_shuffled = Some((inserted, removed))
             }
         }
+
+        last_shuffled
     }
 }
 
@@ -426,7 +432,7 @@ struct RenderState {
 impl State for RenderState {
     fn step(&mut self, window: &mut Window) {
 
-        self.pfm.shuffle(self.shuffles_per_render);
+        let last_shuffled = self.pfm.shuffle(self.shuffles_per_render);
 
         let mut oldgroup = None;
         mem::swap(&mut oldgroup, &mut self.group);
@@ -440,7 +446,17 @@ impl State for RenderState {
         // in the future we can combine neighboring pieces for faster rendering
         for piece in &self.pfm.complex {
             let mut c = group.add_cube(1.0, 1.0, 1.0);
-            c.set_color(1.0, 0.0, 0.0);
+            c.set_color(0.2, 0.2, 0.6);
+
+            if let Some(last_shuffled) = last_shuffled {
+                if last_shuffled.0.0 == piece.0 && last_shuffled.0.1 ==piece.1 && last_shuffled.0.2 == piece.2 {
+                    c.set_color(0.0, 1.0, 0.0);
+                }
+                if last_shuffled.1.0 == piece.0 && last_shuffled.1.1 ==piece.1 && last_shuffled.1.2 == piece.2 {
+                    c.set_color(1.0, 0.0, 0.0);
+                }
+            }
+
             // because we don't maintain strict bounds, this isn't a perfect translation. We could
             // recompute strict bounds
             c.append_translation(&Translation3::new(piece.0 as f32 - (self.pfm.max_x as f32 - self.pfm.min_x as f32)/2.0 - self.pfm.min_x as f32 , piece.1 as f32 - (self.pfm.max_y as f32 - self.pfm.min_y as f32)/2.0 as f32 - self.pfm.min_y as f32, piece.2 as f32 - (self.pfm.max_z as f32 - self.pfm.min_z as f32)/2.0 - self.pfm.min_z as f32))
@@ -453,8 +469,7 @@ impl State for RenderState {
 
 #[wasm_bindgen(start)]
 pub fn our_main() -> Result<(), JsValue> {
-    let mut pfm = Polyform::new(10);
-    pfm.shuffle(10);
+    let mut pfm = Polyform::new(60);
     pfm.render_shuffle(1);
     Ok(())
 }
