@@ -1,3 +1,4 @@
+![Screen Shot 2022-10-08 at 7 24 45 PM](https://user-images.githubusercontent.com/10949560/194731058-21ec39ac-7e6d-41ae-a192-9a894b1ceff1.png)
 # MEGL Polyforms: Rust Version
 
 Here is an accelerated version of what was originally prototyped in the Colab, with a few improvements
