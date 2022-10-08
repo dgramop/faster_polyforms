@@ -1,9 +1,11 @@
 extern crate kiss3d;
 extern crate rand;
-#[macro_use] extern crate clap;
 
 use std::collections::HashSet;
+use std::mem;
 
+use kiss3d::scene::SceneNode;
+use kiss3d::window::State;
 use rand::Rng;
 use rand::prelude::*;
 
@@ -12,10 +14,17 @@ use kiss3d::nalgebra::{Vector3, UnitQuaternion, Translation, Translation3};
 use kiss3d::window::Window;
 use kiss3d::light::Light;
 
- use clap::Parser;
+use wasm_bindgen::prelude::*;
+
+struct EmptyState();
+
+impl State for EmptyState {
+    fn step(&mut self, window: &mut Window) {
+    }
+}
 
 /// Represents a 3D Polyform
-struct Polyform {
+pub struct Polyform {
     
     // The actual polyform
     complex: HashSet<(i32, i32, i32)>,
@@ -37,6 +46,7 @@ struct Polyform {
     // other ways to use this information to speed up check validitiy, but for now
     insertable_locations: HashSet<(i32, i32, i32)>,
 }
+
 
 // O(1)
 fn get_neighbors(set: &HashSet<(i32, i32, i32)>, block: &(i32, i32, i32)) -> Vec<(i32, i32, i32)> {
@@ -301,7 +311,7 @@ impl Polyform {
     }
 
     // O(n)
-    fn new(len: usize) -> Polyform {
+    pub fn new(len: usize) -> Polyform {
         let mut polyform = Polyform {
             complex: HashSet::new(),
             insertable_locations: HashSet::new(), // we could initialize this to be to origin but it doesn't matter
@@ -351,7 +361,7 @@ impl Polyform {
     }
 
     // this function is strongly based on the eaxmple in kiss3d's readme
-    fn render(&mut self)  {
+    pub fn render(&mut self)  {
         let mut window = Window::new("Polyform");
 
         let mut g1 = window.add_group();
@@ -368,43 +378,27 @@ impl Polyform {
 
         window.set_light(Light::StickToCamera);
 
+        window.render_loop(EmptyState())
 
-        while window.render() {
-        }
     }
 
     // this function is strongly based on the eaxmple in kiss3d's readme
-    fn render_shuffle(&mut self, shuffles_per_render: usize)  {
+    pub fn render_shuffle(self, shuffles_per_render: usize)  {
         let mut window = Window::new("Polyform");
 
         
 
         window.set_light(Light::StickToCamera);
 
-        let mut shuffles = 0;
-
-        loop {
-            self.shuffle(shuffles_per_render);
-            shuffles = shuffles + shuffles_per_render;
-
-            let mut g1 = window.add_group();
-            self.recompute_bounding_box();
-
-            // in the future we can combine neighboring pieces for faster rendering
-            for piece in &self.complex {
-                let mut c = g1.add_cube(1.0, 1.0, 1.0);
-                c.set_color(1.0, 0.0, 0.0);
-                // because we don't maintain strict bounds, this isn't a perfect translation. We could
-                // recompute strict bounds
-                c.append_translation(&Translation3::new(piece.0 as f32 - (self.max_x as f32 - self.min_x as f32)/2.0 - self.min_x as f32 , piece.1 as f32 - (self.max_y as f32 - self.min_y as f32)/2.0 as f32 - self.min_y as f32, piece.2 as f32 - (self.max_z as f32 - self.min_z as f32)/2.0 - self.min_z as f32))
-            }
-            window.render();
-            println!("Polyform with {} shuffles since first render", shuffles);
-            window.remove_node(&mut g1);
-        }
+        window.render_loop(RenderState {
+            shuffles_per_render,
+            pfm: self,
+            group: None
+        })
     }
+    
 
-    fn shuffle(&mut self, times: usize) {
+    pub fn shuffle(&mut self, times: usize) {
         let LEN: usize = self.complex.len();
         for _ in 0..times {
             let removed = self.remove_random();
@@ -423,32 +417,44 @@ impl Polyform {
     }
 }
 
-#[derive(Parser, Debug)]
-struct Args {
-    #[arg(short, long)]
-    render: Option<usize>,
-
-    #[arg(short, long)]
-    shuffles: Option<usize>,
-
-    #[arg(short, long)]
-    length: usize,
+struct RenderState {
+    shuffles_per_render: usize,
+    pfm: Polyform,
+    group: Option<SceneNode>
 }
 
-fn main() {
-    let args = Args::parse();
+impl State for RenderState {
+    fn step(&mut self, window: &mut Window) {
 
-    let mut pfm = Polyform::new(args.length);
+        self.pfm.shuffle(self.shuffles_per_render);
 
-    // if you specify both, you'll get a pre-shuffled polyform so the less interesting shuffles
-    // happen quickly
-    if let Some(shuffles) = args.shuffles {
-        pfm.shuffle(shuffles);
+        let mut oldgroup = None;
+        mem::swap(&mut oldgroup, &mut self.group);
+        if let Some(mut oldgroup) = oldgroup {
+            window.remove_node(&mut oldgroup)
+        }
+
+        let mut group = window.add_group();
+        self.pfm.recompute_bounding_box();
+
+        // in the future we can combine neighboring pieces for faster rendering
+        for piece in &self.pfm.complex {
+            let mut c = group.add_cube(1.0, 1.0, 1.0);
+            c.set_color(1.0, 0.0, 0.0);
+            // because we don't maintain strict bounds, this isn't a perfect translation. We could
+            // recompute strict bounds
+            c.append_translation(&Translation3::new(piece.0 as f32 - (self.pfm.max_x as f32 - self.pfm.min_x as f32)/2.0 - self.pfm.min_x as f32 , piece.1 as f32 - (self.pfm.max_y as f32 - self.pfm.min_y as f32)/2.0 as f32 - self.pfm.min_y as f32, piece.2 as f32 - (self.pfm.max_z as f32 - self.pfm.min_z as f32)/2.0 - self.pfm.min_z as f32))
+        }
+
+        self.group = Some(group)
+
     }
+}
 
-    if let Some(shuffles_per_render) = args.render {
-        pfm.render_shuffle(shuffles_per_render);
-    }
-
-    pfm.render();
+#[wasm_bindgen(start)]
+pub fn our_main() -> Result<(), JsValue> {
+    let mut pfm = Polyform::new(10);
+    pfm.shuffle(10);
+    pfm.render_shuffle(1);
+    Ok(())
 }
