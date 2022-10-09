@@ -4,6 +4,9 @@ extern crate rand;
 use std::collections::HashSet;
 use std::mem;
 
+use kiss3d::camera::ArcBall;
+use kiss3d::camera::FirstPerson;
+use kiss3d::nalgebra::Point3;
 use kiss3d::scene::SceneNode;
 use kiss3d::window::State;
 use rand::Rng;
@@ -128,7 +131,12 @@ fn get_random(set: &HashSet<(i32, i32, i32)>) -> (i32, i32, i32) {
 
 impl Polyform {
 
-    // O(n^2)
+    // O(n^2) 
+    // worst case:
+    // T(n) = n + T(n-1)
+    // best case:
+    // T(n) = n + T(n-3)
+    // early termination is possible but not considered for these "hand-wavy" computations
     /// Naive known-correct approach (trivial to prove correctness for yourself) for checking validity. Basically a BFS
     fn naive(&self) -> bool {
         let mut strongly_connected = HashSet::<(i32, i32, i32)>::new();
@@ -386,14 +394,26 @@ impl Polyform {
     pub fn render_shuffle(self, shuffles_per_render: usize)  {
         let mut window = Window::new("Polyform");
 
-        
 
         window.set_light(Light::StickToCamera);
+
+        let mut max_dist = self.max_x - self.min_x;
+        if self.max_y - self.min_y > max_dist {
+            max_dist = self.max_y - self.min_y;
+        }
+        if self.max_z - self.min_z > max_dist {
+            max_dist = self.max_z - self.min_z;
+        }
+        
+        let eye = Point3::new((max_dist as f32)/2.0, (max_dist as f32)/2.0, (max_dist as f32)/2.0);
+        let at = Point3::origin();
+        let arcball = ArcBall::new(eye, at);
 
         window.render_loop(RenderState {
             shuffles_per_render,
             pfm: self,
-            group: None
+            group: None,
+            camera: arcball
         })
     }
     
@@ -426,10 +446,24 @@ impl Polyform {
 struct RenderState {
     shuffles_per_render: usize,
     pfm: Polyform,
-    group: Option<SceneNode>
+    group: Option<SceneNode>,
+    camera: ArcBall
 }
 
 impl State for RenderState {
+    fn cameras_and_effect_and_renderer(
+            &mut self,
+        ) -> (
+            Option<&mut dyn kiss3d::camera::Camera>,
+            Option<&mut dyn kiss3d::planar_camera::PlanarCamera>,
+            Option<&mut dyn kiss3d::renderer::Renderer>,
+            Option<&mut dyn kiss3d::post_processing::PostProcessingEffect>,
+        ) {
+        
+
+        return (Some(&mut self.camera), None, None, None);
+    }
+
     fn step(&mut self, window: &mut Window) {
 
         let last_shuffled = self.pfm.shuffle(self.shuffles_per_render);

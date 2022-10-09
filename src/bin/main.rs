@@ -12,6 +12,9 @@ struct Args {
 
     #[arg(short, long)]
     length: usize,
+
+    #[arg(short, long)]
+    norender: bool,
 }
 
 fn main() {
@@ -30,5 +33,7 @@ fn main() {
         return;
     }
 
-    pfm.render();
+    if !args.norender {
+        pfm.render();
+    }
 }
