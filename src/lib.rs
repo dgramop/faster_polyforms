@@ -409,11 +409,13 @@ impl Polyform {
         let at = Point3::origin();
         let arcball = ArcBall::new(eye, at);
 
+
         window.render_loop(RenderState {
             shuffles_per_render,
             pfm: self,
             group: None,
-            camera: arcball
+            camera: arcball,
+            total_shuffles: 0,
         })
     }
     
@@ -441,13 +443,31 @@ impl Polyform {
 
         last_shuffled
     }
+
+    pub fn export_scad(&mut self) -> String {
+        let mut scad = String::new();
+        self.recompute_bounding_box();
+
+
+        for piece in &self.complex {
+            let centered = self.center(piece);
+            scad.push_str(&format!("translate([{}, {}, {}]) cube([1.01, 1.01, 1.01]);\n", centered.0, centered.1, centered.2));
+        }
+
+        scad
+    }
+
+    pub fn center(&self, piece: &(i32, i32, i32)) -> (f32, f32, f32) {
+        (piece.0 as f32 - (self.max_x as f32 - self.min_x as f32)/2.0 - self.min_x as f32 , piece.1 as f32 - (self.max_y as f32 - self.min_y as f32)/2.0 as f32 - self.min_y as f32, piece.2 as f32 - (self.max_z as f32 - self.min_z as f32)/2.0 - self.min_z as f32)
+    }
 }
 
 struct RenderState {
     shuffles_per_render: usize,
     pfm: Polyform,
     group: Option<SceneNode>,
-    camera: ArcBall
+    camera: ArcBall,
+    total_shuffles: usize
 }
 
 impl State for RenderState {
@@ -459,7 +479,6 @@ impl State for RenderState {
             Option<&mut dyn kiss3d::renderer::Renderer>,
             Option<&mut dyn kiss3d::post_processing::PostProcessingEffect>,
         ) {
-        
 
         return (Some(&mut self.camera), None, None, None);
     }
@@ -467,6 +486,9 @@ impl State for RenderState {
     fn step(&mut self, window: &mut Window) {
 
         let last_shuffled = self.pfm.shuffle(self.shuffles_per_render);
+
+        self.total_shuffles = self.total_shuffles + self.shuffles_per_render;
+        println!("Completed {} shuffles live", self.total_shuffles);
 
         let mut oldgroup = None;
         mem::swap(&mut oldgroup, &mut self.group);
@@ -491,13 +513,16 @@ impl State for RenderState {
                 }
             }
 
+            let centered = self.pfm.center(piece);
+
             // because we don't maintain strict bounds, this isn't a perfect translation. We could
             // recompute strict bounds
-            c.append_translation(&Translation3::new(piece.0 as f32 - (self.pfm.max_x as f32 - self.pfm.min_x as f32)/2.0 - self.pfm.min_x as f32 , piece.1 as f32 - (self.pfm.max_y as f32 - self.pfm.min_y as f32)/2.0 as f32 - self.pfm.min_y as f32, piece.2 as f32 - (self.pfm.max_z as f32 - self.pfm.min_z as f32)/2.0 - self.pfm.min_z as f32))
+            c.append_translation(&Translation3::new(centered.0, centered.1, centered.2))
         }
 
-        self.group = Some(group)
 
+
+        self.group = Some(group)
     }
 }
 

@@ -15,6 +15,9 @@ struct Args {
 
     #[arg(short, long)]
     norender: bool,
+
+    #[arg(short, long)]
+    export: bool,
 }
 
 fn main() {
@@ -31,6 +34,10 @@ fn main() {
     if let Some(shuffles_per_render) = args.render {
         pfm.render_shuffle(shuffles_per_render);
         return;
+    }
+
+    if args.export {
+        println!("{}", pfm.export_scad());
     }
 
     if !args.norender {
