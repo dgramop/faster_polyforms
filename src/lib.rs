@@ -4,11 +4,6 @@ extern crate rand;
 use std::collections::HashSet;
 use std::mem;
 
-use kiss3d::camera::ArcBall;
-use kiss3d::camera::FirstPerson;
-use kiss3d::nalgebra::Point3;
-use kiss3d::scene::SceneNode;
-use kiss3d::window::State;
 use rand::Rng;
 use rand::prelude::*;
 
@@ -16,7 +11,14 @@ use rand::prelude::*;
 use kiss3d::nalgebra::{Vector3, UnitQuaternion, Translation, Translation3};
 use kiss3d::window::Window;
 use kiss3d::light::Light;
+use kiss3d::camera::ArcBall;
+use kiss3d::camera::FirstPerson;
+use kiss3d::nalgebra::Point3;
+use kiss3d::scene::SceneNode;
+use kiss3d::window::State;
 
+
+// wasm
 use wasm_bindgen::prelude::*;
 
 struct EmptyState();
@@ -409,6 +411,8 @@ impl Polyform {
         let at = Point3::origin();
         let arcball = ArcBall::new(eye, at);
 
+        //let ids = Ids::new(window.conrod_ui_mut().widget_id_generator());
+
 
         window.render_loop(RenderState {
             shuffles_per_render,
@@ -508,16 +512,25 @@ impl State for RenderState {
                 if last_shuffled.0.0 == piece.0 && last_shuffled.0.1 ==piece.1 && last_shuffled.0.2 == piece.2 {
                     c.set_color(0.0, 1.0, 0.0);
                 }
-                if last_shuffled.1.0 == piece.0 && last_shuffled.1.1 ==piece.1 && last_shuffled.1.2 == piece.2 {
-                    c.set_color(1.0, 0.0, 0.0);
-                }
             }
 
             let centered = self.pfm.center(piece);
 
             // because we don't maintain strict bounds, this isn't a perfect translation. We could
             // recompute strict bounds
-            c.append_translation(&Translation3::new(centered.0, centered.1, centered.2))
+            c.append_translation(&Translation3::new(centered.0, centered.1, centered.2));
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(last_shuffled) = last_shuffled {
+            let mut removed = group.add_cube(1.0, 1.0, 1.0);
+
+            removed.set_lines_width(1.0);
+            removed.set_surface_rendering_activation(false);
+
+            removed.set_color(1.0, 0.0, 0.0);
+            let centered_removed = self.pfm.center(&last_shuffled.1);
+            removed.append_translation(&Translation3::new(centered_removed.0, centered_removed.1, centered_removed.2));
         }
 
 
