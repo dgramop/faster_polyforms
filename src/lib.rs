@@ -172,6 +172,7 @@ impl Polyform {
 
             // check if we made progress. if we did a whole pass and didn't make progress, then we
             // are stuck
+            // can do early termination if all removed's neighbors are added in the set
         }
 
         if strongly_connected.len() == self.complex.len() {
@@ -198,6 +199,35 @@ impl Polyform {
         }
 
         self.naive()
+    }
+
+    /// Stack + DFS
+    fn dfs(&self) -> bool {
+        let mut needs_neighbors_added = Vec::<(i32, i32, i32)>::new();
+        let mut visited = HashSet::<(i32, i32, i32)>::new();
+
+        let first = match self.complex.iter().next() {
+            Some(first) => first,
+            None => {
+                // an empty polyform is a strongly connected polyform
+                return true;
+            }
+        };
+
+        needs_neighbors_added.push(first.clone());
+        visited.insert(first.clone());
+
+        while let Some(center) = needs_neighbors_added.pop() {
+            // add all neighbors to the set and, if they haven't already been visited, to the stack
+            let neighbors = get_neighbors(&self.complex, &center);
+            for neighbor in neighbors {
+                if visited.insert(neighbor) {
+                    needs_neighbors_added.push(neighbor);
+                }
+            }
+        }
+
+        visited.len() == self.complex.len()
     }
 
     /// dcut algorithm I proposed earlier for check validity
@@ -436,7 +466,7 @@ impl Polyform {
             if self.complex.len() != LEN {
                 println!("detected decrease in polyform size");
             }
-            if !self.semi_naive(&removed) {
+            if !self.dfs() { //can use self.naive or self.semi_naive here instead
                 //println!("Reversing operation");
                 self.insert(removed);
                 self.remove(&inserted);
