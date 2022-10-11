@@ -11,3 +11,7 @@ kiss3d = { version = "0.35" }
 rand = "0.8"
 clap = {version = "4", features = ["derive"]}
 wasm-bindgen = "0.2"
+
+# for profiler so that it's possible to follow calls into lib.rs
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "target-feature=+crt-static"]
