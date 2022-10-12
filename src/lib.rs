@@ -21,13 +21,6 @@ use kiss3d::window::State;
 // wasm
 use wasm_bindgen::prelude::*;
 
-struct EmptyState();
-
-impl State for EmptyState {
-    fn step(&mut self, window: &mut Window) {
-    }
-}
-
 /// Represents a 3D Polyform
 pub struct Polyform {
     
@@ -400,32 +393,14 @@ impl Polyform {
         }
     }
 
-    // this function is strongly based on the eaxmple in kiss3d's readme
-    pub fn render(&mut self)  {
-        let mut window = Window::new("Polyform");
-
-        let mut g1 = window.add_group();
-        self.recompute_bounding_box();
-
-        // in the future we can combine neighboring pieces for faster rendering
-        for piece in &self.complex {
-            let mut c = g1.add_cube(1.0, 1.0, 1.0);
-            c.set_color(1.0, 0.0, 0.0);
-            // because we don't maintain strict bounds, this isn't a perfect translation. We could
-            // recompute strict bounds
-            c.append_translation(&Translation3::new(piece.0 as f32 - (self.max_x as f32 - self.min_x as f32)/2.0 - self.min_x as f32 , piece.1 as f32 - (self.max_y as f32 - self.min_y as f32)/2.0 as f32 - self.min_y as f32, piece.2 as f32 - (self.max_z as f32 - self.min_z as f32)/2.0 - self.min_z as f32))
-        }
-
-        window.set_light(Light::StickToCamera);
-
-        window.render_loop(EmptyState())
-
+    // this function is strongly based on the eaxmple in kiss3d's readme. Deprecated, use
+    pub fn render(self) {
+        self.render_shuffle(0, Some(0))
     }
 
     // this function is strongly based on the eaxmple in kiss3d's readme
-    pub fn render_shuffle(self, shuffles_per_render: usize)  {
+    pub fn render_shuffle(self, shuffles_per_render: usize, stop_after: Option<usize>)  {
         let mut window = Window::new("Polyform");
-
 
         window.set_light(Light::StickToCamera);
 
@@ -446,6 +421,7 @@ impl Polyform {
 
         window.render_loop(RenderState {
             shuffles_per_render,
+            stop_after,
             pfm: self,
             group: None,
             camera: arcball,
@@ -498,6 +474,7 @@ impl Polyform {
 
 struct RenderState {
     shuffles_per_render: usize,
+    stop_after: Option<usize>,
     pfm: Polyform,
     group: Option<SceneNode>,
     camera: ArcBall,
@@ -518,6 +495,13 @@ impl State for RenderState {
     }
 
     fn step(&mut self, window: &mut Window) {
+
+        match self.stop_after {
+            Some(stop_after) if stop_after <= self.total_shuffles => {
+                return;
+            },
+            _ => ()
+        }
 
         let last_shuffled = self.pfm.shuffle(self.shuffles_per_render);
 
@@ -571,7 +555,7 @@ impl State for RenderState {
 
 #[wasm_bindgen(start)]
 pub fn our_main() -> Result<(), JsValue> {
-    let mut pfm = Polyform::new(60);
-    pfm.render_shuffle(1);
+    let mut pfm = Polyform::new(100);
+    pfm.render_shuffle(10, None);
     Ok(())
 }

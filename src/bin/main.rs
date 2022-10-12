@@ -14,9 +14,6 @@ struct Args {
     length: usize,
 
     #[arg(short, long)]
-    norender: bool,
-
-    #[arg(short, long)]
     export: bool,
 }
 
@@ -27,20 +24,22 @@ fn main() {
 
     // if you specify both, you'll get a pre-shuffled polyform so the less interesting shuffles
     // happen quickly
-    if let Some(shuffles) = args.shuffles {
-        pfm.shuffle(shuffles);
-    }
 
-    if let Some(shuffles_per_render) = args.render {
-        pfm.render_shuffle(shuffles_per_render);
-        return;
-    }
-
-    if args.export {
+    if let Some(render_step) = args.render {
+        pfm.render_shuffle(render_step, args.shuffles);
+    } else {
+        println!("Please use the --render <render_step> flag if you would like a visualization");
+        match args.shuffles {
+            Some(shuffles) => {
+                pfm.shuffle(shuffles);
+            },
+            None => {
+                loop {
+                    pfm.shuffle(usize::max_value());
+                }
+            }
+        }
         println!("{}", pfm.export_scad());
     }
 
-    if !args.norender {
-        pfm.render();
-    }
 }
