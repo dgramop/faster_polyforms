@@ -5,7 +5,7 @@ use blocks::*;
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(short, long)]
-    render: Option<usize>,
+    live: Option<usize>,
 
     #[arg(short, long)]
     shuffles: Option<usize>,
@@ -15,6 +15,9 @@ struct Args {
 
     #[arg(short, long)]
     export: bool,
+
+    #[arg(short, long)]
+    norender: bool,
 }
 
 fn main() {
@@ -25,21 +28,21 @@ fn main() {
     // if you specify both, you'll get a pre-shuffled polyform so the less interesting shuffles
     // happen quickly
 
-    if let Some(render_step) = args.render {
+    if let Some(render_step) = args.live {
         pfm.render_shuffle(render_step, args.shuffles);
     } else {
-        println!("Please use the --render <render_step> flag if you would like a visualization");
         match args.shuffles {
             Some(shuffles) => {
                 pfm.shuffle(shuffles);
             },
             None => {
-                loop {
-                    pfm.shuffle(usize::max_value());
-                }
+                eprintln!("Use --shuffles <count> to supply the number of shuffles.");
             }
         }
-        println!("{}", pfm.export_scad());
+        if !args.norender {
+            // technically does n+1 shuffles, there's an easy fix here but it's not super important
+            pfm.render_shuffle(1, Some(1))
+        }
     }
 
 }

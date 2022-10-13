@@ -1,6 +1,7 @@
 extern crate kiss3d;
 extern crate rand;
 
+use std::collections::BTreeSet;
 use std::collections::HashSet;
 use std::mem;
 
@@ -124,6 +125,18 @@ fn get_random(set: &HashSet<(i32, i32, i32)>) -> (i32, i32, i32) {
     panic!()
 }
 
+// O(1)
+/// Used in DCUT algorithm, since we're looking for elements of ~P that preclude a strong
+/// connection between two elements of P, ~P does not have to be strongly connected for P to not be
+/// strongly connected. 
+// Proof: Suppose two pieces are diagonal to each other after a corner piece is moved elsewhere. This piece should be cuttable,
+// but P's compliment is not strongly connected through the corner, in fact P's compliment is
+// diagonal. Therefore P is not strongly connected doesn't imply ~P is strongly connected
+fn get_vacant_neighbors_dcut(set: &HashSet<(i32, i32, i32)>, block: &(i32, i32, i32)) -> Vec<(i32, i32, i32)> {
+    // reminder to clean up the dcut algorithm main function
+    todo!()
+}
+
 impl Polyform {
 
     // O(n^2) 
@@ -229,7 +242,27 @@ impl Polyform {
         // super sparse
         //
 
-        let last_ring = todo!();
+        let mut last_ring = BTreeSet::<(i32, i32, i32)>::new();
+
+        // while it is possible for us to make an entire ring that connects to itself and to the
+        // previous ring, like an onion
+        // and we aren't yet at the bounding box (in which case P's complement extends to infinity
+        // and we can trivially show it's contiguous)
+        loop {
+            let next_ring = BTreeSet::<(i32, i32, i32)>::new();
+
+            for ring_element in &last_ring {
+                // get vacant moves (neighbor algorithm is different when we're cutting, since we
+                // have to show the location of element in ~P precludes a strong connection between
+                // parts of P)
+
+                // wish to move outward towards the bounding box
+                
+
+            }
+
+            last_ring = next_ring;
+        }
 
         // last ring contains the outermost ring of the cut algorithm. Goal is to seek outward from
         // the innermost ring
@@ -240,7 +273,6 @@ impl Polyform {
         // for each item in the stack, pop and append ALL empty neighbors
 
         // check if all the pieces 
-        todo!()
     }
 
     // each algorithm can run in its own thread, and perhaps can have multiple threads if we can
@@ -495,7 +527,7 @@ impl State for RenderState {
     }
 
     fn step(&mut self, window: &mut Window) {
-
+        
         match self.stop_after {
             Some(stop_after) if stop_after <= self.total_shuffles => {
                 return;
@@ -547,9 +579,9 @@ impl State for RenderState {
             removed.append_translation(&Translation3::new(centered_removed.0, centered_removed.1, centered_removed.2));
         }
 
+        self.group = Some(group);
 
-
-        self.group = Some(group)
+        
     }
 }
 
