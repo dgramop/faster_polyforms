@@ -451,14 +451,17 @@ impl Polyform {
         //let ids = Ids::new(window.conrod_ui_mut().widget_id_generator());
 
 
-        window.render_loop(RenderState {
+        let rs = RenderState {
             shuffles_per_render,
             stop_after,
             pfm: self,
             group: None,
             camera: arcball,
             total_shuffles: 0,
-        })
+            exported: false
+        };
+
+        window.render_loop(rs)
     }
     
 
@@ -499,6 +502,19 @@ impl Polyform {
         scad
     }
 
+    pub fn export(&self) -> String {
+        let mut export = String::from("[");
+
+        // don't center in order to prevent floating point problems
+        for piece in &self.complex {
+            export.push_str(&format!("({}, {}, {}), ", piece.0, piece.1, piece.2));
+        }
+
+        export.push_str("]");
+
+        export
+    }
+
     pub fn center(&self, piece: &(i32, i32, i32)) -> (f32, f32, f32) {
         (piece.0 as f32 - (self.max_x as f32 - self.min_x as f32)/2.0 - self.min_x as f32 , piece.1 as f32 - (self.max_y as f32 - self.min_y as f32)/2.0 as f32 - self.min_y as f32, piece.2 as f32 - (self.max_z as f32 - self.min_z as f32)/2.0 - self.min_z as f32)
     }
@@ -510,7 +526,8 @@ struct RenderState {
     pfm: Polyform,
     group: Option<SceneNode>,
     camera: ArcBall,
-    total_shuffles: usize
+    total_shuffles: usize,
+    exported: bool
 }
 
 impl State for RenderState {
@@ -530,6 +547,11 @@ impl State for RenderState {
         
         match self.stop_after {
             Some(stop_after) if stop_after <= self.total_shuffles => {
+                if !self.exported {
+                    println!("{}", self.pfm.export());
+                    self.exported = true;
+                }
+                //window.close();
                 return;
             },
             _ => ()
@@ -538,7 +560,7 @@ impl State for RenderState {
         let last_shuffled = self.pfm.shuffle(self.shuffles_per_render);
 
         self.total_shuffles = self.total_shuffles + self.shuffles_per_render;
-        println!("Completed {} shuffles live", self.total_shuffles);
+        eprintln!("Completed {} shuffles live", self.total_shuffles);
 
         let mut oldgroup = None;
         mem::swap(&mut oldgroup, &mut self.group);

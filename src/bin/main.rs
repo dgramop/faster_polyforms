@@ -4,7 +4,7 @@ use blocks::*;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(short, long)]
+    #[arg(long)]
     live: Option<usize>,
 
     #[arg(short, long)]
@@ -34,15 +34,18 @@ fn main() {
         match args.shuffles {
             Some(shuffles) => {
                 pfm.shuffle(shuffles);
+                
+                if !args.norender {
+                    // technically does n+1 shuffles, there's an easy fix here but it's not super important
+                    println!("{}", pfm.export());
+                    pfm.render_shuffle(1, Some(1));
+                } else {
+                    println!("{}", pfm.export());
+                }
             },
             None => {
                 eprintln!("Use --shuffles <count> to supply the number of shuffles.");
             }
         }
-        if !args.norender {
-            // technically does n+1 shuffles, there's an easy fix here but it's not super important
-            pfm.render_shuffle(1, Some(1))
-        }
     }
-
 }
