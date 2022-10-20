@@ -2,6 +2,13 @@
 use clap::Parser;
 use blocks::*;
 
+#[derive(clap::ValueEnum, Clone, Debug)]
+enum Export {
+    Scad,
+    Tuples,
+    Analysis
+}
+
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(long)]
@@ -14,7 +21,7 @@ struct Args {
     length: usize,
 
     #[arg(short, long)]
-    export: bool,
+    export: Export,
 
     #[arg(short, long)]
     norender: bool,
@@ -29,6 +36,7 @@ fn main() {
     // happen quickly
 
     if let Some(render_step) = args.live {
+        // TODO: don't ignore the export type in render shuffle mode
         pfm.render_shuffle(render_step, args.shuffles);
     } else {
         match args.shuffles {
@@ -37,10 +45,18 @@ fn main() {
                 
                 if !args.norender {
                     // technically does n+1 shuffles, there's an easy fix here but it's not super important
-                    println!("{}", pfm.export());
+                    println!("{}", match args.export { 
+                        Export::Scad => pfm.export_scad(),
+                        Export::Tuples => pfm.export(),
+                        Export::Analysis => pfm.export_analysis()
+                    });
                     pfm.render_shuffle(1, Some(1));
                 } else {
-                    println!("{}", pfm.export());
+                    println!("{}", match args.export { 
+                        Export::Scad => pfm.export_scad(),
+                        Export::Tuples => pfm.export(),
+                        Export::Analysis => pfm.export_analysis()
+                    });
                 }
             },
             None => {

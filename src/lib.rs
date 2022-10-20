@@ -515,6 +515,17 @@ impl Polyform {
         export
     }
 
+    pub fn export_analysis(&self) -> String {
+        let mut export = String::from("3");
+
+        // don't center in order to prevent floating point problems
+        for piece in &self.complex {
+            export.push_str(&format!("\n{} {} {} 1", piece.0, piece.1, piece.2));
+        }
+
+        export
+    }
+
     pub fn center(&self, piece: &(i32, i32, i32)) -> (f32, f32, f32) {
         (piece.0 as f32 - (self.max_x as f32 - self.min_x as f32)/2.0 - self.min_x as f32 , piece.1 as f32 - (self.max_y as f32 - self.min_y as f32)/2.0 as f32 - self.min_y as f32, piece.2 as f32 - (self.max_z as f32 - self.min_z as f32)/2.0 - self.min_z as f32)
     }
