@@ -6,5 +6,5 @@
 for (( i=0; i<=$3; i++ ))
 do
 	echo $i
-	./target/release/main --norender --length $1 --shuffles $2 > $4/$i.txt
+	./target/release/main --norender --length $1 --shuffles $2 --export analysis > $4/$i.txt
 done
