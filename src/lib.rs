@@ -4,9 +4,12 @@ extern crate rand;
 use std::collections::BTreeSet;
 use std::collections::HashSet;
 use std::mem;
+use std::cmp;
 
 use rand::Rng;
 use rand::prelude::*;
+use rand::distributions::{Bernoulli, Distribution};
+
 
 // for rendering
 use kiss3d::nalgebra::{Vector3, UnitQuaternion, Translation, Translation3};
@@ -21,6 +24,12 @@ use kiss3d::window::State;
 
 // wasm
 use wasm_bindgen::prelude::*;
+
+#[derive(Clone, Debug)]
+pub enum Dist {
+    Bernoulli(f64),
+    Uniform
+}
 
 /// Represents a 3D Polyform
 pub struct Polyform {
@@ -44,6 +53,9 @@ pub struct Polyform {
     // beacuse this includes holes, we can't use this as a "tighter bounding box". There may be
     // other ways to use this information to speed up check validitiy, but for now
     insertable_locations: HashSet<(i32, i32, i32)>,
+
+    // percolation probility
+    dist: Dist,
 }
 
 
@@ -375,8 +387,22 @@ impl Polyform {
         return r.clone();
     }
 
+    // O(1)
+    fn compute_probability(&mut self, x_perimeter: usize, y_perimeter: usize) {
+        match self.dist {
+            Dist::Bernoulli(p) => {
+                let mut perimeter = y_perimeter - x_perimeter;
+                let mut probability = ((1.0 as f64)-p).powf(perimeter as f64); 
+                probability = if p > 1.0 {1.0} else {p};
+                self.dist = Dist::Bernoulli(p);
+            },
+            Dist::Uniform => ()
+        }
+
+    }
+
     // O(n)
-    pub fn new(len: usize) -> Polyform {
+    pub fn new(len: usize, dist: Dist) -> Polyform {
         let mut polyform = Polyform {
             complex: HashSet::new(),
             insertable_locations: HashSet::new(), // we could initialize this to be to origin but it doesn't matter
@@ -385,7 +411,8 @@ impl Polyform {
             min_y: 0,
             max_y: 0,
             min_z: 0,
-            max_z: 0
+            max_z: 0,
+            dist
         };
 
         for i in 0..len {
@@ -467,6 +494,7 @@ impl Polyform {
 
     pub fn shuffle(&mut self, times: usize) -> Option<((i32, i32, i32), (i32, i32, i32))> {
         let LEN: usize = self.complex.len();
+        let mut LEN_X = self.insertable_locations.len();
 
         let mut last_shuffled = None;
         for _ in 0..times {
@@ -482,7 +510,29 @@ impl Polyform {
                 self.insert(removed);
                 self.remove(&inserted);
             } else {
-                last_shuffled = Some((inserted, removed))
+
+                self.compute_probability(LEN_X, self.insertable_locations.len());
+
+                match self.dist{
+                    Dist::Bernoulli(probability) => {
+                        // bernoulli coin flip
+                        
+                        let dist = Bernoulli::new(probability).unwrap();
+                        let sample = dist.sample(&mut rand::thread_rng());
+
+                        if !sample {
+                            println!("Reversing operation");
+                            self.insert(removed);
+                            self.remove(&inserted);
+                        } else {
+                            println!("Maintainig operation and updating p");
+                            self.dist = Dist::Bernoulli(probability);
+                            last_shuffled = Some((inserted, removed));
+                        }
+                    }
+                    Dist::Uniform => ()
+                }
+
             }
         }
 
@@ -529,7 +579,7 @@ impl Polyform {
     pub fn center(&self, piece: &(i32, i32, i32)) -> (f32, f32, f32) {
         (piece.0 as f32 - (self.max_x as f32 - self.min_x as f32)/2.0 - self.min_x as f32 , piece.1 as f32 - (self.max_y as f32 - self.min_y as f32)/2.0 as f32 - self.min_y as f32, piece.2 as f32 - (self.max_z as f32 - self.min_z as f32)/2.0 - self.min_z as f32)
     }
-}
+    }
 
 struct RenderState {
     shuffles_per_render: usize,
@@ -620,7 +670,7 @@ impl State for RenderState {
 
 #[wasm_bindgen(start)]
 pub fn our_main() -> Result<(), JsValue> {
-    let mut pfm = Polyform::new(100);
+    let mut pfm = Polyform::new(100, Dist::Uniform);
     pfm.render_shuffle(10, None);
     Ok(())
 }

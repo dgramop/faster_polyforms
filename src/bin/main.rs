@@ -25,12 +25,20 @@ struct Args {
 
     #[arg(short, long)]
     norender: bool,
+
+    #[arg(short, long)]
+    bernoulli: Option<f64>,
+
 }
 
 fn main() {
     let args = Args::parse();
 
-    let mut pfm = Polyform::new(args.length);
+    let mut pfm = Polyform::new(args.length, if let Some(p) = args.bernoulli {
+        Dist::Bernoulli(p)
+    } else {
+        Dist::Uniform
+    });
 
     // if you specify both, you'll get a pre-shuffled polyform so the less interesting shuffles
     // happen quickly
