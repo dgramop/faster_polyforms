@@ -511,12 +511,12 @@ impl Polyform {
                     let sample = dist.sample(&mut rand::thread_rng());
 
                     if !sample {
-                        println!("Reversing operation");
+                        // println!("Reversing operation");
                         self.insert(removed);
                         self.remove(&inserted);
                         distCheck = false
                     } else {
-                        println!("Maintainig operation and updating p");
+                        // println!("Maintainig operation and updating p");
                         self.dist = Dist::Bernoulli(probability);
                         last_shuffled = Some((inserted, removed));
                     }
