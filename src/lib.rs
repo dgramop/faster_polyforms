@@ -54,7 +54,7 @@ pub struct Polyform {
     // other ways to use this information to speed up check validitiy, but for now
     insertable_locations: HashSet<(i32, i32, i32)>,
 
-    // percolation probility
+    // distribution
     dist: Dist,
 }
 
@@ -388,18 +388,13 @@ impl Polyform {
     }
 
     // O(1)
-    fn compute_probability(&mut self, x_perimeter: usize, y_perimeter: usize) {
-        match self.dist {
-            Dist::Bernoulli(p) => {
-                let mut perimeter = y_perimeter - x_perimeter;
-                let mut probability = ((1.0 as f64)-p).powf(perimeter as f64); 
-                probability = if p > 1.0 {1.0} else {p};
-                self.dist = Dist::Bernoulli(p);
-            },
-            Dist::Uniform => ()
+    fn compute_probability(&mut self, x_perimeter: usize, y_perimeter: usize, p: f64) {
+            let mut perimeter = y_perimeter - x_perimeter;
+            let mut probability = ((1.0 as f64)-p).powf(perimeter as f64); 
+            probability = if p > 1.0 {1.0} else {p};
+            self.dist = Dist::Bernoulli(p);
         }
 
-    }
 
     // O(n)
     pub fn new(len: usize, dist: Dist) -> Polyform {
@@ -412,7 +407,7 @@ impl Polyform {
             max_y: 0,
             min_z: 0,
             max_z: 0,
-            dist
+            dist,
         };
 
         for i in 0..len {
@@ -505,34 +500,36 @@ impl Polyform {
             if self.complex.len() != LEN {
                 println!("detected decrease in polyform size");
             }
-            if !self.dfs() { //can use self.naive or self.semi_naive here instead
-                //println!("Reversing operation");
-                self.insert(removed);
-                self.remove(&inserted);
-            } else {
 
-                self.compute_probability(LEN_X, self.insertable_locations.len());
+            let mut distCheck = true;
+            match self.dist{
+                Dist::Bernoulli(probability) => {
+                    
+                    // bernoulli coin flip
+                    self.compute_probability(LEN_X, self.insertable_locations.len(), probability);
+                    let dist = Bernoulli::new(probability).unwrap();
+                    let sample = dist.sample(&mut rand::thread_rng());
 
-                match self.dist{
-                    Dist::Bernoulli(probability) => {
-                        // bernoulli coin flip
-                        
-                        let dist = Bernoulli::new(probability).unwrap();
-                        let sample = dist.sample(&mut rand::thread_rng());
-
-                        if !sample {
-                            println!("Reversing operation");
-                            self.insert(removed);
-                            self.remove(&inserted);
-                        } else {
-                            println!("Maintainig operation and updating p");
-                            self.dist = Dist::Bernoulli(probability);
-                            last_shuffled = Some((inserted, removed));
-                        }
+                    if !sample {
+                        println!("Reversing operation");
+                        self.insert(removed);
+                        self.remove(&inserted);
+                        distCheck = false
+                    } else {
+                        println!("Maintainig operation and updating p");
+                        self.dist = Dist::Bernoulli(probability);
+                        last_shuffled = Some((inserted, removed));
                     }
-                    Dist::Uniform => ()
                 }
+                Dist::Uniform => ()
+            }
 
+            if distCheck {
+                if !self.dfs() { //can use self.naive or self.semi_naive here instead
+                    //println!("Reversing operation");
+                    self.insert(removed);
+                    self.remove(&inserted);
+                } 
             }
         }
 
@@ -578,8 +575,9 @@ impl Polyform {
 
     pub fn center(&self, piece: &(i32, i32, i32)) -> (f32, f32, f32) {
         (piece.0 as f32 - (self.max_x as f32 - self.min_x as f32)/2.0 - self.min_x as f32 , piece.1 as f32 - (self.max_y as f32 - self.min_y as f32)/2.0 as f32 - self.min_y as f32, piece.2 as f32 - (self.max_z as f32 - self.min_z as f32)/2.0 - self.min_z as f32)
+
     }
-    }
+}
 
 struct RenderState {
     shuffles_per_render: usize,
