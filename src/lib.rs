@@ -492,7 +492,7 @@ impl Polyform {
         let mut LEN_X = self.insertable_locations.len();
 
         let mut last_shuffled = None;
-        for _ in 0..times {
+        for i in 0..times {
             let removed = self.remove_random();
             //println!("removed {:?}", removed);
             let inserted = self.insert_random();
@@ -512,13 +512,12 @@ impl Polyform {
 
                     if !sample {
                         // println!("Reversing operation");
-                        self.insert(removed);
                         self.remove(&inserted);
+                        self.insert(removed);
                         distCheck = false
                     } else {
                         // println!("Maintainig operation and updating p");
                         self.dist = Dist::Bernoulli(probability);
-                        last_shuffled = Some((inserted, removed));
                     }
                 }
                 Dist::Uniform => ()
@@ -527,12 +526,13 @@ impl Polyform {
             if distCheck {
                 if !self.dfs() { //can use self.naive or self.semi_naive here instead
                     //println!("Reversing operation");
-                    self.insert(removed);
                     self.remove(&inserted);
-                } 
+                    self.insert(removed);
+                } else {
+                    last_shuffled = Some((inserted, removed));
+                }
             }
         }
-
         last_shuffled
     }
 
