@@ -1,10 +1,12 @@
 # first argument is the size of the polyform to analyze (determines with directory it looks in)
-# second argument is the number of polyforms to analyze
+# second argument is the perc probability
 
-mkdir -p ../analysis/$1;
+mkdir -p ../../analysis/$1/$2;
 
-for (( i=0; i<=$2; i++ ))
+POLYFORMS="../../results/$1/$2/*"
+
+for p in $POLYFORMS
 do
-	echo $i
-	./perseusMac ScubTop ../polyforms/$1/$i.txt ../analysis/$1/$i.txt
+	echo $p
+	./perseusLin ScubTop $p ../../analysis/$1/$2/`basename $p`.txt
 done
