@@ -1,11 +1,16 @@
 extern crate kiss3d;
 extern crate rand;
+extern crate nom;
 
 use std::collections::BTreeSet;
 use std::collections::HashSet;
 use std::mem;
 use std::cmp;
 
+use nom::bytes::complete::take;
+use nom::bytes::complete::take_while;
+use nom::bytes::streaming::take_till;
+use nom::character::is_digit;
 use rand::Rng;
 use rand::prelude::*;
 use rand::distributions::{Bernoulli, Distribution};
@@ -21,6 +26,14 @@ use kiss3d::nalgebra::Point3;
 use kiss3d::scene::SceneNode;
 use kiss3d::window::State;
 
+// import/export
+use nom::{
+  IResult,
+  bytes::complete::{tag, take_while_m_n},
+  combinator::map_res,
+  sequence::tuple
+};
+
 
 // wasm
 use wasm_bindgen::prelude::*;
@@ -35,7 +48,7 @@ pub enum Dist {
 pub struct Polyform {
     
     // The actual polyform
-    complex: HashSet<(i32, i32, i32)>,
+    pub complex: HashSet<(i32, i32, i32)>,
 
     // Bookkeeping information to speed up operations on the polyform
 
@@ -52,12 +65,11 @@ pub struct Polyform {
     // keeps track of all empty locations strongly connected to a piece
     // beacuse this includes holes, we can't use this as a "tighter bounding box". There may be
     // other ways to use this information to speed up check validitiy, but for now
-    insertable_locations: HashSet<(i32, i32, i32)>,
+    pub insertable_locations: HashSet<(i32, i32, i32)>,
 
     // distribution
-    dist: Dist,
+    pub dist: Dist,
 }
-
 
 // O(1)
 fn get_neighbors(set: &HashSet<(i32, i32, i32)>, block: &(i32, i32, i32)) -> Vec<(i32, i32, i32)> {
@@ -571,6 +583,99 @@ impl Polyform {
         }
 
         export
+    }
+
+    fn import_i32(line: &str) -> IResult<&str, i32> {
+        // read the token
+        let (input, iso_int) = take_while(|c| is_digit(c as u8) || c == '-')(line)?;
+
+        // eat the delimeter
+        let (input, _) = take_while(|c| c == ' ')(input)?;
+
+
+        let i = i32::from_str_radix(iso_int, 10).expect("Parsed integer");
+
+
+        Ok((input, i))
+    }
+
+    fn import_analysis_line(input: &str) -> IResult<&str, (i32, i32, i32)> {
+        let (input, line) = take_while(|c| c != '\n')(input)?;
+
+        let (_, tp) = tuple((Self::import_i32, Self::import_i32, Self::import_i32))(line)?;
+
+        // eat the delimeter
+        let (input, _) = take_while(|c| c == '\n')(input)?;
+
+        Ok((input, tp))
+    }
+
+    /// DO NOT use this function unless you need to compute the insertable_locations site perimeter
+    /// from scratch. You should aim to make incremental O(1) changes where possible
+    pub fn compute_insertable(&mut self) {
+        // loop through self and add neighbors to the site perimeter set
+        let mut site_perimeter = HashSet::<(i32, i32, i32)>::new();
+
+        for piece in &self.complex {
+            for neighbor in get_vacant_neighbors(&self.complex, &piece) {
+                site_perimeter.insert(neighbor.clone());
+            }
+        }
+
+        self.insertable_locations = site_perimeter;
+    }
+
+    pub fn import_analysis(analysis: &str) -> IResult<&str, Polyform> {
+        let mut pfm = Polyform { complex: HashSet::<(i32, i32, i32)>::new(), min_x: i32::MAX, max_x: i32::MIN, min_y: i32::MAX, max_y: i32::MIN, min_z: i32::MAX, max_z: i32::MIN, insertable_locations: HashSet::<(i32, i32, i32)>::new(), dist: Dist::Uniform };
+
+        // read in the dimension
+        let (mut input, _) = tag("3\n")(analysis)?;
+
+        // read each line in the analysis and construct the complex
+        loop {
+            if input == "" {
+                break;
+            }
+
+            input = match Self::import_analysis_line(input) {
+                Ok((input, block)) => {
+                    if block.0 < pfm.min_x {
+                        pfm.min_x = block.0;
+                    }
+
+                    if block.1 < pfm.min_y {
+                        pfm.min_y = block.1;
+                    }
+
+                    if block.2 < pfm.min_z {
+                        pfm.min_z = block.2;
+                    }
+
+                    if block.0 > pfm.max_x {
+                        pfm.max_x = block.0;
+                    }
+
+                    if block.1 > pfm.max_y {
+                        pfm.max_y = block.1;
+                    }
+                    
+                    if block.2 > pfm.max_z {
+                        pfm.max_y = block.2;
+                    }
+
+                    pfm.complex.insert(block);
+                    input
+                },
+                IResult::Err(e) => {
+                    eprintln!("Breaking with error {}", e);
+                    break;
+                }
+            }
+        }
+
+        pfm.compute_insertable();
+
+        Ok((input, pfm))
     }
 
     pub fn center(&self, piece: &(i32, i32, i32)) -> (f32, f32, f32) {
