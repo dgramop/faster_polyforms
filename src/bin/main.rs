@@ -28,7 +28,6 @@ struct Args {
 
     #[arg(short, long)]
     bernoulli: Option<f64>,
-
 }
 
 fn main() {

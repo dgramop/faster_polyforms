@@ -400,12 +400,11 @@ impl Polyform {
     }
 
     // O(1)
-    fn compute_probability(&mut self, x_perimeter: usize, y_perimeter: usize, p: f64) {
-            let mut perimeter = y_perimeter - x_perimeter;
-            let mut probability = ((1.0 as f64)-p).powf(perimeter as f64); 
-            probability = if p > 1.0 {1.0} else {p};
-            self.dist = Dist::Bernoulli(p);
-        }
+    fn compute_probability(&mut self, x_perimeter: usize, y_perimeter: usize, p: f64) -> f64 {
+        let perimeter = y_perimeter - x_perimeter;
+        let probability = ((1.0 as f64)-p).powf(perimeter as f64); 
+        return probability;
+    }
 
 
     // O(n)
@@ -513,30 +512,43 @@ impl Polyform {
                 println!("detected decrease in polyform size");
             }
 
-            let mut distCheck = true;
-            match self.dist{
+            if i%5000 == 0 {
+                println!("times: {} sa: {}", i, self.insertable_locations.len());
+            }
+
+            let did_shuffle = match self.dist{
                 Dist::Bernoulli(probability) => {
                     
                     // bernoulli coin flip
-                    self.compute_probability(LEN_X, self.insertable_locations.len(), probability);
+                    println!("current probability (should be fixed): {}", probability);
+
+                    //compute probability based on site perimeter
+                    let computed_probability = self.compute_probability(LEN_X, self.insertable_locations.len(), probability);
+
+                    // sample from distribution
                     let dist = Bernoulli::new(probability).unwrap();
                     let sample = dist.sample(&mut rand::thread_rng());
 
                     if !sample {
+                        // Reverse operation if reject mode
                         // println!("Reversing operation");
                         self.remove(&inserted);
                         self.insert(removed);
-                        distCheck = false
+
+                        false
                     } else {
-                        // println!("Maintainig operation and updating p");
-                        self.dist = Dist::Bernoulli(probability);
+                        // println!("Maintainig operation");
+                        // Do nothing, let the 
+                        true
                     }
                 }
-                Dist::Uniform => ()
-            }
+                Dist::Uniform => true 
+            };
 
-            if distCheck {
+            // the polyform was shuffled, so we should check that it's still connected
+            if did_shuffle {
                 if !self.dfs() { //can use self.naive or self.semi_naive here instead
+                    // not strongly connected, so reverse operation
                     //println!("Reversing operation");
                     self.remove(&inserted);
                     self.insert(removed);
