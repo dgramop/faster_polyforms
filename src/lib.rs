@@ -512,15 +512,15 @@ impl Polyform {
                 println!("detected decrease in polyform size");
             }
 
-            if i%5000 == 0 {
+            /*if i%5000 == 0 {
                 println!("times: {} sa: {}", i, self.insertable_locations.len());
-            }
+            }*/
 
             let did_shuffle = match self.dist{
                 Dist::Bernoulli(probability) => {
                     
                     // bernoulli coin flip
-                    println!("current probability (should be fixed): {}", probability);
+                    //println!("current probability (should be fixed): {}", probability);
 
                     //compute probability based on site perimeter
                     let computed_probability = self.compute_probability(LEN_X, self.insertable_locations.len(), probability);
