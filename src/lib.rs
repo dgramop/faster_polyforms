@@ -403,6 +403,9 @@ impl Polyform {
     fn compute_probability(&mut self, x_perimeter: usize, y_perimeter: usize, p: f64) -> f64 {
         let perimeter = y_perimeter - x_perimeter;
         let probability = ((1.0 as f64)-p).powf(perimeter as f64); 
+        if probability > 1.0 {
+            return 1.0;
+        }
         return probability;
     }
 
@@ -500,7 +503,7 @@ impl Polyform {
 
     pub fn shuffle(&mut self, times: usize) -> Option<((i32, i32, i32), (i32, i32, i32))> {
         let LEN: usize = self.complex.len();
-        let mut LEN_X = self.insertable_locations.len();
+        let mut LEN_X = self.insertable_locations.len(); 
 
         let mut last_shuffled = None;
         for i in 0..times {
@@ -527,7 +530,11 @@ impl Polyform {
 
                     // sample from distribution
                     let dist = Bernoulli::new(probability).unwrap();
+
                     let sample = dist.sample(&mut rand::thread_rng());
+
+                    // get a number on some interval
+                    // check which part of the interval it's in
 
                     if !sample {
                         // Reverse operation if reject mode
