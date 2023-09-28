@@ -400,8 +400,8 @@ impl Polyform {
     }
 
     // O(1)
-    fn compute_probability(&mut self, x_perimeter: usize, y_perimeter: usize, p: f64) -> f64 {
-        let perimeter = y_perimeter - x_perimeter;
+    pub fn compute_probability(&mut self, x_perimeter: usize, y_perimeter: usize, p: f64) -> f64 {
+        let perimeter = (y_perimeter as i32) - (x_perimeter as i32);
         let probability = ((1.0 as f64)-p).powf(perimeter as f64); 
         if probability > 1.0 {
             return 1.0;
@@ -502,16 +502,17 @@ impl Polyform {
     
 
     pub fn shuffle(&mut self, times: usize) -> Option<((i32, i32, i32), (i32, i32, i32))> {
-        let LEN: usize = self.complex.len();
-        let mut LEN_X = self.insertable_locations.len(); 
 
         let mut last_shuffled = None;
-        for i in 0..times {
+        for _i in 0..times {
+            let len: usize = self.complex.len();
+            let len_old = self.insertable_locations.len(); 
+
             let removed = self.remove_random();
             //println!("removed {:?}", removed);
             let inserted = self.insert_random();
             //println!("inserted {:?}", inserted);
-            if self.complex.len() != LEN {
+            if self.complex.len() != len {
                 println!("detected decrease in polyform size");
             }
 
@@ -526,10 +527,10 @@ impl Polyform {
                     //println!("current probability (should be fixed): {}", probability);
 
                     //compute probability based on site perimeter
-                    let computed_probability = self.compute_probability(LEN_X, self.insertable_locations.len(), probability);
+                    let computed_probability = self.compute_probability(len_old, self.insertable_locations.len(), probability);
 
                     // sample from distribution
-                    let dist = Bernoulli::new(probability).unwrap();
+                    let dist = Bernoulli::new(computed_probability).unwrap();
 
                     let sample = dist.sample(&mut rand::thread_rng());
 
@@ -560,6 +561,7 @@ impl Polyform {
                     self.remove(&inserted);
                     self.insert(removed);
                 } else {
+                    // update the length
                     last_shuffled = Some((inserted, removed));
                 }
             }
