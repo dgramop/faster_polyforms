@@ -2,26 +2,20 @@ extern crate kiss3d;
 extern crate rand;
 extern crate nom;
 
-use std::collections::BTreeSet;
 use std::collections::HashSet;
 use std::mem;
-use std::cmp;
 
-use nom::bytes::complete::take;
 use nom::bytes::complete::take_while;
-use nom::bytes::streaming::take_till;
 use nom::character::is_digit;
 use rand::Rng;
-use rand::prelude::*;
 use rand::distributions::{Bernoulli, Distribution};
 
 
 // for rendering
-use kiss3d::nalgebra::{Vector3, UnitQuaternion, Translation, Translation3};
+use kiss3d::nalgebra::{Translation3};
 use kiss3d::window::Window;
 use kiss3d::light::Light;
 use kiss3d::camera::ArcBall;
-use kiss3d::camera::FirstPerson;
 use kiss3d::nalgebra::Point3;
 use kiss3d::scene::SceneNode;
 use kiss3d::window::State;
@@ -29,8 +23,7 @@ use kiss3d::window::State;
 // import/export
 use nom::{
   IResult,
-  bytes::complete::{tag, take_while_m_n},
-  combinator::map_res,
+  bytes::complete::tag,
   sequence::tuple
 };
 
@@ -149,6 +142,7 @@ fn get_random(set: &HashSet<(i32, i32, i32)>) -> (i32, i32, i32) {
     panic!()
 }
 
+/*
 // O(1)
 /// Used in DCUT algorithm, since we're looking for elements of ~P that preclude a strong
 /// connection between two elements of P, ~P does not have to be strongly connected for P to not be
@@ -160,6 +154,7 @@ fn get_vacant_neighbors_dcut(set: &HashSet<(i32, i32, i32)>, block: &(i32, i32, 
     // reminder to clean up the dcut algorithm main function
     todo!()
 }
+*/
 
 impl Polyform {
 
@@ -170,7 +165,7 @@ impl Polyform {
     // T(n) = n + T(n-3)
     // early termination is possible but not considered for these "hand-wavy" computations
     /// Naive known-correct approach (trivial to prove correctness for yourself) for checking validity. Basically a BFS
-    fn naive(&self) -> bool {
+    fn _naive(&self) -> bool {
         let mut strongly_connected = HashSet::<(i32, i32, i32)>::new();
         let mut working_poly = self.complex.clone();
 
@@ -213,7 +208,7 @@ impl Polyform {
     }
 
     /// naive with quick exit functions, relies on the fact that the previous polyform was valid
-    fn semi_naive(&self, removed: &(i32, i32, i32)) -> bool {
+    fn _semi_naive(&self, removed: &(i32, i32, i32)) -> bool {
 
         // if the piece never actually moved anywhere, i.e. if it was reinserted in the same spot,
         // the polyform is certainly still valid
@@ -228,7 +223,7 @@ impl Polyform {
             return true;
         }
 
-        self.naive()
+        self._naive()
     }
 
     /// Stack + DFS
@@ -260,7 +255,8 @@ impl Polyform {
         visited.len() == self.complex.len()
     }
 
-    /// dcut algorithm I proposed earlier for check validity
+    /*
+    /// INCOMPLETE dcut algorithm I proposed earlier for check validity
     fn dcut(&self, through: &(i32, i32, i32)) -> bool {
         // terminates much quicker for known valid pieces and invalidity when P's complement isn't
         // super sparse
@@ -298,6 +294,7 @@ impl Polyform {
 
         // check if all the pieces 
     }
+    */
 
     // each algorithm can run in its own thread, and perhaps can have multiple threads if we can
     // make it less serial
@@ -794,7 +791,7 @@ impl State for RenderState {
 
 #[wasm_bindgen(start)]
 pub fn our_main() -> Result<(), JsValue> {
-    let mut pfm = Polyform::new(100, Dist::Uniform);
+    let pfm = Polyform::new(100, Dist::Uniform);
     pfm.render_shuffle(10, None);
     Ok(())
 }

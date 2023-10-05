@@ -1,4 +1,4 @@
-#[macro_use] extern crate clap;
+extern crate clap;
 use clap::Parser;
 use blocks::*;
 

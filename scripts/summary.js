@@ -1,11 +1,12 @@
 const fs = require("fs")
 
-// first argument is the polyform's number of elements
-// second argument is the number of polyforms to analyze
+// first argument is the polyform's percolation probability
+// second argument is the polyform's number of elements 
+// third argument is the number of polyforms to analyze
 
 let total_holes = [];
-for(let i=0; i<parseInt(process.argv[3]); i++) {
-	let betti = fs.readFileSync("../analysis/"+process.argv[2]+"/"+i+".txt_betti.txt")
+for(let i=0; i<parseInt(process.argv[4]); i++) {
+	let betti = fs.readFileSync("../../analysis/"+process.argv[2]+"/"+process.argv[3]+"/"+i+".txt.txt_betti.txt")
 	let holes = betti.toString("ascii").replace("\n","").trim().split(" ");
 	console.log(holes);
 
