@@ -12,7 +12,7 @@ use rand::distributions::{Bernoulli, Distribution};
 
 
 // for rendering
-use kiss3d::nalgebra::{Translation3};
+use kiss3d::nalgebra::Translation3;
 use kiss3d::window::Window;
 use kiss3d::light::Light;
 use kiss3d::camera::ArcBall;
@@ -466,6 +466,7 @@ impl Polyform {
     // this function is strongly based on the eaxmple in kiss3d's readme
     pub fn render_shuffle(self, shuffles_per_render: usize, stop_after: Option<usize>)  {
         let mut window = Window::new("Polyform");
+        window.set_background_color(0.8, 0.8, 0.8);
 
         window.set_light(Light::StickToCamera);
 

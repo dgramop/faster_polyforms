@@ -1,0 +1,27 @@
+resources:
+- name: faster_polyforms_repo
+  type: git
+  source:
+    uri: https://github.com/dgramop/faster_polyforms.git
+    branch: bernoulli
+
+jobs:
+- name: compile_checks
+  plan:
+  - get: faster_polyforms_repo
+    trigger: true
+  - task: cargo_check
+    config:
+      inputs:
+      - name: faster_polyforms_repo
+      outputs:
+      - name: faster_polyfoms_repo
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: rust
+      run:
+        path: cargo
+        args: [ check ]
+        dir: faster_polyforms_repo
