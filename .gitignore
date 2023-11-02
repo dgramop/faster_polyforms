@@ -13,3 +13,5 @@ dist/
 
 polyforms/*
 analysis/*
+
+flamegraph.svg
