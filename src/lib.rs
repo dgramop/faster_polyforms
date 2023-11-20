@@ -37,8 +37,37 @@ pub enum Dist {
     Uniform
 }
 
+pub trait Polyform<E> {
+    /// Returns a list of all neighbors of the provided element
+    fn get_neighbors(&self, element: E) -> Vec<E>;
+
+    /// Returns a randomly selected element of the Polyform
+    fn get_random(&self) -> E;
+
+    /// Inserts a given element into the polyform. May update the bounding box etc. on the polyform
+    fn insert(&mut self, elem: E);
+
+    // TODO
+    /// TODO Computes the probability of rejection from the percolation probability and the state
+    /// of the polyform
+    fn compute_probability(&self, elem: E);
+
+    /// Checks the polyform for connectedness.
+    fn check_validity(&mut self, times: usize) -> bool {
+        // concrete, should use get neighbors, dfs, etc.
+        todo!()
+    }
+    
+    /// Shuffles the given polyform
+    fn shuffle(&mut self, times: usize) -> Option<(E, E)> {
+        // concrete, should leverage get random, check validity etc.
+        todo!()
+    }
+
+}
+
 /// Represents a 3D Polyform
-pub struct Polyform {
+pub struct Polycube {
     
     // The actual polyform
     pub complex: HashSet<(i32, i32, i32)>,
@@ -156,7 +185,7 @@ fn get_vacant_neighbors_dcut(set: &HashSet<(i32, i32, i32)>, block: &(i32, i32, 
 }
 */
 
-impl Polyform {
+impl Polycube {
 
     // O(n^2) 
     // worst case:
@@ -408,8 +437,8 @@ impl Polyform {
 
 
     // O(n)
-    pub fn new(len: usize, dist: Dist) -> Polyform {
-        let mut polyform = Polyform {
+    pub fn new(len: usize, dist: Dist) -> Polycube {
+        let mut polyform = Polycube {
             complex: HashSet::new(),
             insertable_locations: HashSet::new(), // we could initialize this to be to origin but it doesn't matter
             min_x: 0,
@@ -644,8 +673,8 @@ impl Polyform {
         self.insertable_locations = site_perimeter;
     }
 
-    pub fn import_analysis(analysis: &str) -> IResult<&str, Polyform> {
-        let mut pfm = Polyform { complex: HashSet::<(i32, i32, i32)>::new(), min_x: i32::MAX, max_x: i32::MIN, min_y: i32::MAX, max_y: i32::MIN, min_z: i32::MAX, max_z: i32::MIN, insertable_locations: HashSet::<(i32, i32, i32)>::new(), dist: Dist::Uniform };
+    pub fn import_analysis(analysis: &str) -> IResult<&str, Polycube> {
+        let mut pfm = Polycube { complex: HashSet::<(i32, i32, i32)>::new(), min_x: i32::MAX, max_x: i32::MIN, min_y: i32::MAX, max_y: i32::MIN, min_z: i32::MAX, max_z: i32::MIN, insertable_locations: HashSet::<(i32, i32, i32)>::new(), dist: Dist::Uniform };
 
         // read in the dimension
         let (mut input, _) = tag("3\n")(analysis)?;
@@ -706,7 +735,7 @@ impl Polyform {
 struct RenderState {
     shuffles_per_render: usize,
     stop_after: Option<usize>,
-    pfm: Polyform,
+    pfm: Polycube,
     group: Option<SceneNode>,
     camera: ArcBall,
     total_shuffles: usize,
@@ -792,7 +821,7 @@ impl State for RenderState {
 
 #[wasm_bindgen(start)]
 pub fn our_main() -> Result<(), JsValue> {
-    let pfm = Polyform::new(100, Dist::Uniform);
+    let pfm = Polycube::new(100, Dist::Uniform);
     pfm.render_shuffle(10, None);
     Ok(())
 }

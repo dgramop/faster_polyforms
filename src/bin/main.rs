@@ -33,7 +33,7 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let mut pfm = Polyform::new(args.length, if let Some(p) = args.bernoulli {
+    let mut pfm = Polycube::new(args.length, if let Some(p) = args.bernoulli {
         Dist::Bernoulli(p)
     } else {
         Dist::Uniform
