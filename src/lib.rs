@@ -7,7 +7,7 @@ use std::mem;
 
 use nom::bytes::complete::take_while;
 use nom::character::is_digit;
-use rand::Rng;
+use rand::{Rng, random};
 use rand::distributions::{Bernoulli, Distribution};
 
 
@@ -495,7 +495,7 @@ impl Polycube {
     // this function is strongly based on the eaxmple in kiss3d's readme
     pub fn render_shuffle(self, shuffles_per_render: usize, stop_after: Option<usize>)  {
         let mut window = Window::new("Polyform");
-        window.set_background_color(0.8, 0.8, 0.8);
+        window.set_background_color(0.0, 0.0, 0.0);
 
         window.set_light(Light::StickToCamera);
 
@@ -769,6 +769,12 @@ impl State for RenderState {
             _ => ()
         }
 
+        // rotate polyform based on mouse location
+        if let Some((mouse_x,mouse_y)) = window.cursor_pos() {
+            self.camera.set_yaw(7f32*(mouse_x/(window.width() as f64)) as f32);
+            self.camera.set_pitch(3f32*((window.height() as f32)-(mouse_y as f32))/(window.height() as f32));
+        }
+
         let last_shuffled = self.pfm.shuffle(self.shuffles_per_render);
 
         self.total_shuffles = self.total_shuffles + self.shuffles_per_render;
@@ -786,7 +792,7 @@ impl State for RenderState {
         // in the future we can combine neighboring pieces for faster rendering
         for piece in &self.pfm.complex {
             let mut c = group.add_cube(1.0, 1.0, 1.0);
-            c.set_color(0.2, 0.2, 0.6);
+            c.set_color(0.2 +random::<f32>()*0.4, 0.3+ random::<f32>()*0.4, 0.9);
 
             if let Some(last_shuffled) = last_shuffled {
                 if last_shuffled.0.0 == piece.0 && last_shuffled.0.1 ==piece.1 && last_shuffled.0.2 == piece.2 {
